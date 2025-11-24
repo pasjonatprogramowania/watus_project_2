@@ -22,16 +22,34 @@ import webrtcvad
 from faster_whisper import WhisperModel
 from groq_stt import GroqSTT
 
-# === TTS: Piper TTS (new Python API) ===
+load_dotenv(dotenv_path=Path(__file__).with_name(".env"), override=True)
+
+
+# ===== TTS: Piper lub Gemini =====
+TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "gemini").lower()
+
 try:
     from piper import PiperVoice
-
     PIPER_AVAILABLE = True
 except ImportError:
     PIPER_AVAILABLE = False
-    import subprocess  # Fallback to old binary method
-
     print("[Watus][TTS] Piper Python API nie dostępne, używam binary metod", flush=True)
+
+# Gemini TTS
+try:
+    from google import genai
+    from google.genai import types
+    import mimetypes
+    import struct
+
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("[Watus][TTS] Google Gemini TTS nie dostępne - pip install google-genai", flush=True)
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
+GEMINI_VOICE = os.environ.get("GEMINI_VOICE", "Callirrhoe")
 
 # === Kontroler diody LED ===
 from led_controller import LEDController
@@ -582,6 +600,181 @@ def piper_say(text: str, out_dev=OUT_DEV):
         log(f"[Perf] TTS_play_ms={int((time.time() - t0) * 1000)}")
 
 
+# Gemini TTS functions
+def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
+    """Generates a WAV file header for the given audio data and parameters.
+
+    Args:
+        audio_data: The raw audio data as a bytes object.
+        mime_type: Mime type of the audio data.
+
+    Returns:
+        A bytes object representing the WAV file header.
+    """
+    parameters = parse_audio_mime_type(mime_type)
+    bits_per_sample = parameters["bits_per_sample"]
+    sample_rate = parameters["rate"]
+    num_channels = 1
+    data_size = len(audio_data)
+    bytes_per_sample = bits_per_sample // 8
+    block_align = num_channels * bytes_per_sample
+    byte_rate = sample_rate * block_align
+    chunk_size = 36 + data_size  # 36 bytes for header fields before data chunk size
+
+    # http://soundfile.sapp.org/doc/WaveFormat/
+
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",          # ChunkID
+        chunk_size,       # ChunkSize (total file size - 8 bytes)
+        b"WAVE",          # Format
+        b"fmt ",          # Subchunk1ID
+        16,               # Subchunk1Size (16 for PCM)
+        1,                # AudioFormat (1 for PCM)
+        num_channels,     # NumChannels
+        sample_rate,      # SampleRate
+        byte_rate,        # ByteRate
+        block_align,      # BlockAlign
+        bits_per_sample,  # BitsPerSample
+        b"data",          # Subchunk2ID
+        data_size         # Subchunk2Size (size of audio data)
+    )
+    return header + audio_data
+
+
+def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
+    """Parses bits per sample and rate from an audio MIME type string.
+
+    Assumes bits per sample is encoded like "L16" and rate as "rate=xxxxx".
+
+    Args:
+        mime_type: The audio MIME type string (e.g., "audio/L16;rate=24000").
+
+    Returns:
+        A dictionary with "bits_per_sample" and "rate" keys. Values will be
+        integers if found, otherwise None.
+    """
+    bits_per_sample = 16
+    rate = 24000
+
+    # Extract rate from parameters
+    parts = mime_type.split(";")
+    for param in parts: # Skip the main type part
+        param = param.strip()
+        if param.lower().startswith("rate="):
+            try:
+                rate_str = param.split("=", 1)[1]
+                rate = int(rate_str)
+            except (ValueError, IndexError):
+                # Handle cases like "rate=" with no value or non-integer value
+                pass # Keep rate as default
+        elif param.startswith("audio/L"):
+            try:
+                bits_per_sample = int(param.split("L", 1)[1])
+            except (ValueError, IndexError):
+                pass # Keep bits_per_sample as default if conversion fails
+
+    return {"bits_per_sample": bits_per_sample, "rate": rate}
+
+
+def gemini_say(text: str, out_dev=OUT_DEV):
+    """Generate speech using Gemini TTS and play it"""
+    if not text or not text.strip():
+        return
+
+    if not GEMINI_AVAILABLE:
+        log("[Watus][TTS] Gemini TTS not available")
+        return
+
+    if not GEMINI_API_KEY:
+        log("[Watus][TTS] GEMINI_API_KEY not set")
+        return
+
+    try:
+        log(f"[Watus][TTS] Generating Gemini TTS for: {text[:50]}...")
+
+        client = genai.Client(api_key=GEMINI_API_KEY)
+
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=text),
+                ],
+            ),
+        ]
+
+        generate_content_config = types.GenerateContentConfig(
+            temperature=1,
+            response_modalities=["audio"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=GEMINI_VOICE
+                    )
+                )
+            ),
+        )
+
+        t0 = time.time()
+
+        audio_data = b""
+        for chunk in client.models.generate_content_stream(
+            model=GEMINI_MODEL,
+            contents=contents,
+            config=generate_content_config,
+        ):
+            if (
+                chunk.candidates is None
+                or chunk.candidates[0].content is None
+                or chunk.candidates[0].content.parts is None
+            ):
+                continue
+            if chunk.candidates[0].content.parts[0].inline_data and chunk.candidates[0].content.parts[0].inline_data.data:
+                inline_data = chunk.candidates[0].content.parts[0].inline_data
+                audio_data = inline_data.data
+                mime_type = inline_data.mime_type
+                break
+            else:
+                # Fallback if no audio data but text response
+                if hasattr(chunk, 'text') and chunk.text:
+                    log(f"[Watus][TTS] No audio, got text: {chunk.text}")
+
+        if audio_data:
+            # Convert to WAV format
+            if mime_type and mime_type.startswith("audio/"):
+                wav_data = convert_to_wav(audio_data, mime_type)
+            else:
+                log("[Watus][TTS] Unsupported audio format")
+                return
+
+            # Load and play audio
+            import io
+            wav_buffer = io.BytesIO(wav_data)
+            audio_array, sample_rate = sf.read(wav_buffer, dtype='float32')
+
+            sd.play(audio_array, sample_rate, device=out_dev, blocking=True)
+
+            log(f"[Perf] Gemini_TTS_play_ms={int((time.time() - t0) * 1000)}")
+        else:
+            log("[Watus][TTS] No audio data generated by Gemini")
+
+    except Exception as e:
+        log(f"[Watus][TTS] Gemini TTS error: {e}")
+
+
+# Universal TTS function with provider switching
+def tts_say(text: str, out_dev=OUT_DEV):
+    """Universal TTS function - Piper or Gemini based on TTS_PROVIDER"""
+
+    if TTS_PROVIDER == "gemini":
+        log("[Watus][TTS] Using Gemini TTS")
+        gemini_say(text, out_dev)
+    else:
+        log("[Watus][TTS] Using Piper TTS")
+        piper_say(text, out_dev)
+
+
 # ===== JSONL =====
 def append_dialog_line(obj: dict, path=DIALOG_PATH):
     with open(path, "a", encoding="utf-8") as f:
@@ -934,7 +1127,7 @@ def tts_worker(state: State, bus: Bus):
         state.set_tts(True);
         cue_speak()
         try:
-            piper_say(text, out_dev=OUT_DEV)
+            tts_say(text, out_dev=OUT_DEV)
         finally:
             state.set_tts(False);
             cue_listen()
