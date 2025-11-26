@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+.venv_win/
+venv/
+env/
+
+# Environment Variables
+.env
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and Data
+*.log
+*.jsonl
+logs/
+
+# Models (large files)
+models/
+!models/.gitkeep
+
+# Temporary/Debug scripts
+debug_download.py
+temp/
+tmp/
+
+# System
+.DS_Store
+Thumbs.db

@@ -3,8 +3,9 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv_win" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 virtualenv at ~/PycharmProjects/watus_project_2/.venv" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10 virtualenv at C:\Users\pawel\Documents\GitHub\watus_project_2\.venv_win" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
