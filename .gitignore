@@ -12,7 +12,7 @@ venv/
 env/
 
 # Environment Variables
-.env
+
 
 # IDEs
 .idea/

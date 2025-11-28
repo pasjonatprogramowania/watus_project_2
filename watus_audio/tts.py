@@ -294,17 +294,87 @@ def synthesize_speech_gemini(text_to_synthesize: str, audio_output_device_index)
         log_message(f"[Watus][TTS] Gemini TTS error: {e}")
 
 
+LOADED_XTTS_MODEL = None
+
+def _initialize_xtts_model():
+    """Ładuje model XTTS do pamięci."""
+    global LOADED_XTTS_MODEL
+    if LOADED_XTTS_MODEL: return True
+    
+    try:
+        from TTS.api import TTS
+        import torch
+        
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        log_message(f"[Watus][TTS] Loading XTTS model on {device}...")
+        
+        # Ładujemy model XTTS v2
+        LOADED_XTTS_MODEL = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+        log_message("[Watus][TTS] XTTS model loaded.")
+        return True
+    except Exception as e:
+        log_message(f"[Watus][TTS] Failed to load XTTS: {e}")
+        return False
+
+def synthesize_speech_xtts(text_to_synthesize: str, audio_output_device_index):
+    """Generuje mowę za pomocą Coqui XTTS-v2."""
+    if not text_to_synthesize or not text_to_synthesize.strip(): return
+    
+    if not _initialize_xtts_model():
+        log_message("[Watus][TTS] XTTS initialization failed.")
+        return
+
+    speaker_wav = config.XTTS_SPEAKER_WAV
+    if not os.path.isfile(speaker_wav):
+        log_message(f"[Watus][TTS] Brak pliku referencyjnego głosu: {speaker_wav}")
+        return
+
+    try:
+        start_time = time.time()
+        # Generujemy do pliku tymczasowego (API TTS często preferuje pliki)
+        # Można też użyć .tts() i dostać wav w pamięci, ale .tts_to_file jest prostsze w obsłudze formatów
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+            output_path = tmp_file.name
+        
+        # Synteza
+        LOADED_XTTS_MODEL.tts_to_file(
+            text=text_to_synthesize,
+            speaker_wav=speaker_wav,
+            language=config.XTTS_LANGUAGE,
+            file_path=output_path
+        )
+        
+        # Odtwarzanie
+        audio_data, sr = sf.read(output_path, dtype="float32")
+        sd.play(audio_data, sr, device=audio_output_device_index, blocking=True)
+        
+        log_message(f"[Perf] XTTS_play_ms={int((time.time() - start_time) * 1000)}")
+        
+        try:
+            os.unlink(output_path)
+        except:
+            pass
+            
+    except Exception as e:
+        log_message(f"[Watus][TTS] XTTS error: {e}")
+
+
 def synthesize_speech_and_play(text_to_synthesize: str, audio_output_device_index):
     """
-    Uniwersalna funkcja TTS - wybiera Piper lub Gemini w zależności od konfiguracji.
+    Uniwersalna funkcja TTS - wybiera Piper, Gemini lub XTTS w zależności od konfiguracji.
     
     Argumenty:
         text_to_synthesize (str): Tekst do wypowiedzenia.
         audio_output_device_index (int): Indeks urządzenia wyjściowego.
     """
-    if config.TTS_PROVIDER == "gemini":
+    provider = config.TTS_PROVIDER
+    
+    if provider == "gemini":
         log_message("[Watus][TTS] Using Gemini TTS")
         synthesize_speech_gemini(text_to_synthesize, audio_output_device_index)
+    elif provider == "xtts":
+        log_message("[Watus][TTS] Using XTTS-v2")
+        synthesize_speech_xtts(text_to_synthesize, audio_output_device_index)
     else:
         log_message("[Watus][TTS] Using Piper TTS")
         synthesize_speech_piper(text_to_synthesize, audio_output_device_index)

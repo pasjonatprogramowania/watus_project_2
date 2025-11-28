@@ -34,6 +34,11 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
 GEMINI_VOICE = os.environ.get("GEMINI_VOICE", "Callirrhoe")
 
+# Konfiguracja XTTS-v2
+XTTS_MODEL_PATH = os.environ.get("XTTS_MODEL_PATH") # Opcjonalnie, jeśli manualnie
+XTTS_SPEAKER_WAV = os.environ.get("XTTS_SPEAKER_WAV", "models/xtts/ref.wav")
+XTTS_LANGUAGE = os.environ.get("XTTS_LANGUAGE", "pl")
+
 # === Rozpoznawanie Mowy (STT) ===
 # Wybór dostawcy STT: 'local' (Whisper) lub 'groq' (obecnie nieużywane)
 STT_PROVIDER = os.environ.get("STT_PROVIDER", "local").lower()
@@ -51,13 +56,37 @@ def _normalize_fw_model(name: str) -> str:
         return f"guillaumekln/faster-whisper-{name.lower()}"
     return name
 
-# Konfiguracja modelu Whisper
-WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL", "small") # Może być ścieżką lub ID repozytorium
-if "/" not in WHISPER_MODEL_NAME and "\\" not in WHISPER_MODEL_NAME:
-     WHISPER_MODEL_NAME = _normalize_fw_model(WHISPER_MODEL_NAME)
+# === Konfiguracja Whisper (Uproszczona) ===
+# Odczytujemy proste zmienne konfiguracyjne
+_whisper_size = os.environ.get("WHISPER_SIZE", "medium").lower()
+_whisper_device_type = os.environ.get("WHISPER_DEVICE_TYPE", "cpu").lower()
 
-WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
-WHISPER_COMPUTE = os.environ.get("WHISPER_COMPUTE_TYPE", os.environ.get("WHISPER_COMPUTE", "int8"))
+# Automatyczne ustalenie ścieżki do modelu
+# Najpierw sprawdzamy lokalny katalog models/faster-whisper-{size}
+_local_model_path = f"models/faster-whisper-{_whisper_size}"
+if os.path.exists(_local_model_path):
+    WHISPER_MODEL_NAME = _local_model_path
+else:
+    # Fallback do nazwy repozytorium (pobierze do cache)
+    WHISPER_MODEL_NAME = f"Systran/faster-whisper-{_whisper_size}"
+
+# Automatyczne ustalenie parametrów compute/device
+if _whisper_device_type == "gpu":
+    WHISPER_DEVICE = "cuda"
+    WHISPER_COMPUTE = "float16"
+else:
+    WHISPER_DEVICE = "cpu"
+    WHISPER_COMPUTE = "int8"
+
+# Nadpisanie (opcjonalne) przez stare zmienne, jeśli ktoś ich użył ręcznie w .env
+if os.environ.get("WHISPER_MODEL"):
+    WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL")
+if os.environ.get("WHISPER_DEVICE"):
+    WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE")
+if os.environ.get("WHISPER_COMPUTE"):
+    WHISPER_COMPUTE = os.environ.get("WHISPER_COMPUTE")
+
+
 WHISPER_NUM_WORKERS = int(os.environ.get("WHISPER_NUM_WORKERS", "1"))
 CPU_THREADS = int(os.environ.get("WATUS_CPU_THREADS", str(os.cpu_count() or 4)))
 
