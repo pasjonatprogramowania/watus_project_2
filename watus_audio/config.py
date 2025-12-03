@@ -24,7 +24,7 @@ SUB_ADDR = os.environ.get("ZMQ_SUB_ADDR", "tcp://127.0.0.1:7781")
 TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "gemini").lower()
 
 # Konfiguracja Piper TTS
-PIPER_MODEL_PATH = os.environ.get("PIPER_MODEL_PATH", "models/piper/voices/pl_PL-darkman-medium.onnx")
+PIPER_MODEL_PATH = os.environ.get("PIPER_MODEL_PATH", "models/piper/voices/pl_PL-jarvis_wg_glos-medium.onnx")
 PIPER_SR = int(os.environ.get("PIPER_SAMPLE_RATE", "22050"))
 PIPER_BIN = os.environ.get("PIPER_BIN")
 PIPER_CONFIG = os.environ.get("PIPER_CONFIG")
@@ -112,7 +112,7 @@ GAP_TOL_MS = int(os.environ.get("WATUS_GAP_TOL_MS", "450"))
 IN_DEV_ENV = os.environ.get("WATUS_INPUT_DEVICE")
 OUT_DEV_ENV = os.environ.get("WATUS_OUTPUT_DEVICE")
 
-DIALOG_PATH = os.environ.get("DIALOG_PATH", "dialog.jsonl")
+DIALOG_PATH = os.environ.get("DIALOG_PATH", "data/watus_audio/dialog.jsonl")
 
 # === Weryfikacja Mówcy (Speaker Verification) ===
 SPEAKER_VERIFY = int(os.environ.get("SPEAKER_VERIFY", "1"))
@@ -138,8 +138,8 @@ HTTP_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", os.environ.get("LLM_HTTP_TIM
 SCENARIOS_DIR = os.environ.get("WATUS_SCENARIOS_DIR", "./scenarios_text")
 SCENARIO_ACTIVE_PATH = os.environ.get("SCENARIO_ACTIVE_PATH", os.path.join(SCENARIOS_DIR, "active.jsonl"))
 CAMERA_NAME  = os.environ.get("CAMERA_NAME", "cam_front")
-CAMERA_JSONL = os.environ.get("CAMERA_JSONL", "camera.jsonl") # Domyślnie plik lokalny
+CAMERA_JSONL = os.environ.get("CAMERA_JSONL", "data/watus_audio/camera.jsonl") # Domyślnie plik lokalny
 LOG_DIR   = os.environ.get("LOG_DIR", "./")
-RESP_FILE = os.path.join(LOG_DIR, "responses.jsonl")
-MELD_FILE = os.path.join(LOG_DIR, "meldunki.jsonl")
+RESP_FILE = os.path.join(LOG_DIR, "data/watus_audio/responses.jsonl")
+MELD_FILE = os.path.join(LOG_DIR, "data/watus_audio/meldunki.jsonl")
 CAM_WINDOW_SEC = float(os.environ.get("CAMERA_WINDOW_SEC", "2.5"))

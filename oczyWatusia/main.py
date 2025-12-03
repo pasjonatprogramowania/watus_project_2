@@ -225,7 +225,7 @@ class CVAgent:
 
                 ema_fps = self.calc_fps() if show_fps else 0
 
-                self.save_to_json("camera.jsonl", detections) if self.save_to_json is not None else None
+                self.save_to_json("data/watus_audio/camera.jsonl", detections) if self.save_to_json is not None else None
                 print(f"Detections: ", pretty_print_dict(detections), f"FPS: {ema_fps:.1f}") if verbose \
                     else None
 

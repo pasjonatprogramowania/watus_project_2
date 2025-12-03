@@ -8,11 +8,13 @@ oczyWatus/__pycache__
 # Virtual Environment
 .venv/
 .venv_win/
+.venv_linux/
+venv_linux/
 venv/
 env/
 
 # Environment Variables
-
+.env
 
 # IDEs
 .idea/
@@ -37,3 +39,22 @@ tmp/
 # System
 .DS_Store
 Thumbs.db
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work
+
+# Models (extensions)
+*.pt
+*.onnx
+*.bin
+
+# Data directory
+data/

@@ -68,6 +68,7 @@ pephubclient==0.4.5
 peppy==0.40.8
 pillow==12.0.0
 piper==0.14.5
+piper-tts==1.3.0
 pipestat==0.12.2
 prompt_toolkit==3.0.52
 propcache==0.4.1
@@ -128,5 +129,3 @@ webrtcvad-wheels==2.0.14
 websockets==15.0.1
 yacman==0.9.4
 yarl==1.22.0
-# TTS
-TTS

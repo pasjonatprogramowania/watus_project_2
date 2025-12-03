@@ -41,7 +41,7 @@ import numpy as np
 from oczyWatusia import CVAgent
 
 # ========= USTAWIENIA Z ENV =========
-DEF_JSONL = os.environ.get("CAMERA_JSONL", "./camera.jsonl")
+DEF_JSONL = os.environ.get("CAMERA_JSONL", "data/watus_audio/camera.jsonl")
 DEF_THR   = float(os.environ.get("VISION_SCORE_THR", "0.5"))
 DEF_HZ    = float(os.environ.get("VISION_WRITE_HZ", "5.0"))
 DEF_RT    = bool(int(os.environ.get("VISION_USE_RTDETR", "0")))
