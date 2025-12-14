@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watus BellaBot Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Rectangular container */
+        .robot-container {
+            position: relative;
+            width: 640px;
+            height: 400px;
+            background: #000;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Main screen */
+        .screen {
+            width: 600px;
+            height: 320px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+            border-radius: 15px;
+        }
+
+        /* Subtle cat ear hints at top */
+        .ear-hints {
+            position: absolute;
+            top: -5px;
+            width: 100%;
+            height: 30px;
+            z-index: 2;
+        }
+
+        .ear-hint {
+            position: absolute;
+            width: 50px;
+            height: 30px;
+            background: #000;
+            top: 0;
+        }
+
+        .ear-hint.left {
+            left: 100px;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .ear-hint.right {
+            right: 100px;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        /* LED indicator */
+        .led-indicator {
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(45deg, #ff9800, #ffc107);
+            border-radius: 50%;
+            box-shadow: 0 0 25px rgba(255, 152, 0, 0.6);
+            z-index: 5;
+            animation: ledPulse 3s ease-in-out infinite;
+        }
+
+        /* Breathing animation */
+        .robot-container {
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        /* Ambient glow effects */
+        .screen::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: radial-gradient(ellipse at center, rgba(255, 152, 0, 0.1) 0%, transparent 70%);
+            border-radius: 25px;
+            z-index: -1;
+            animation: ambientGlow 6s ease-in-out infinite;
+        }
+
+        /* State-specific ambient glows */
+        .state-excited .screen::before {
+            background: radial-gradient(ellipse at center, rgba(255, 152, 0, 0.15) 0%, transparent 70%);
+            animation: ambientGlow 2s ease-in-out infinite;
+        }
+
+        .state-sleeping .screen::before {
+            background: radial-gradient(ellipse at center, rgba(33, 150, 243, 0.1) 0%, transparent 70%);
+            animation: ambientGlow 8s ease-in-out infinite;
+        }
+
+        .state-joyful .screen::before {
+            background: radial-gradient(ellipse at center, rgba(156, 39, 176, 0.12) 0%, transparent 70%);
+            animation: ambientGlow 2.5s ease-in-out infinite;
+        }
+
+        .state-thinking .screen::before {
+            background: radial-gradient(ellipse at center, rgba(255, 152, 0, 0.08) 0%, transparent 70%);
+            animation: ambientGlow 5s ease-in-out infinite;
+        }
+
+        .state-listening .screen::before {
+            background: radial-gradient(ellipse at center, rgba(156, 39, 176, 0.1) 0%, transparent 70%);
+            animation: ambientGlow 3s ease-in-out infinite;
+        }
+
+        /* Face container */
+        .face-container {
+            position: relative;
+            width: 520px;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Eyes container */
+        .eyes-container {
+            display: flex;
+            justify-content: space-between;
+            width: 420px;
+            margin-top: 50px;
+            gap: 100px;
+        }
+
+        .eye {
+            width: 150px;
+            height: 150px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* White ring - the actual eye shape */
+        .eye-ring {
+            width: 150px;
+            height: 150px;
+            border: 8px solid #fff;
+            border-radius: 50%;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: blink 6s infinite;
+        }
+
+        /* The center is just the black screen background */
+        .eye-center {
+            width: 65px;
+            height: 65px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        /* White sparkle in the upper part of the ring */
+        .eye-sparkle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            top: 15px;
+            right: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            animation: sparkleTwinkle 2s ease-in-out infinite;
+        }
+
+        /* Secondary sparkle for extra life */
+        .eye-secondary-sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            top: 8px;
+            right: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: sparkleFlicker 1.5s ease-in-out infinite;
+        }
+
+        /* Eye pupils for looking directions */
+        .eye-pupil {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .eye-pupil.happy {
+            border-radius: 25px 25px 0 0;
+        }
+
+        .eye-pupil.top-left {
+            transform: translate(-210%, -210%);
+        }
+
+        /* Blinking animation */
+        @keyframes blink {
+            0%, 90%, 100% { 
+                transform: scaleY(1); 
+                opacity: 1;
+            }
+            95% { 
+                transform: scaleY(0.1); 
+                opacity: 0.3;
+            }
+        }
+
+        /* Winking animation */
+        @keyframes winkBlink {
+            0%, 80%, 100% { 
+                transform: scaleY(1); 
+                opacity: 1;
+            }
+            85% { 
+                transform: scaleY(0.1); 
+                opacity: 0.3;
+            }
+        }
+
+        .eye-blink {
+            animation: blink 3s ease-in-out infinite;
+        }
+
+        /* Different eye shapes */
+        .eye-closed {
+            width: 60px;
+            height: 4px;
+            background: #fff;
+            border-radius: 2px;
+            margin: 38px 0;
+        }
+
+        .eye-angle-left, .eye-angle-right {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 48px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            line-height: 100px;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .eye-angle-left {
+            transform: translate(-50%, -50%) rotate(-15deg);
+        }
+
+        .eye-angle-right {
+            transform: translate(-50%, -50%) rotate(15deg);
+        }
+
+        .eye-squeezed {
+            width: 65px;
+            height: 20px;
+            background: #fff;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        /* Eyebrows */
+        .eyebrows {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .eyebrow {
+            position: absolute;
+            width: 30px;
+            height: 5px;
+            background: #fff;
+            border-radius: 3px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .eyebrow-left {
+            top: 95px;
+            left: 135px;
+        }
+
+        .eyebrow-right {
+            top: 95px;
+            right: 135px;
+        }
+
+        /* Mouth area */
+        .mouth-area {
+            position: relative;
+            margin-bottom: 70px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Different mouth shapes */
+        .mouth-neutral {
+            width: 50px;
+            height: 6px;
+            background: #fff;
+            border-radius: 3px;
+        }
+
+        .mouth-w {
+            width: 35px;
+            height: 25px;
+            border: 5px solid #fff;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .mouth-open {
+            width: 55px;
+            height: 40px;
+            background: #fff;
+            border-radius: 0 0 25px 25px;
+            position: relative;
+            display: flex;
+        }
+
+        .mouth-open::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 15px;
+            background: #ffb6c1;
+            border-radius: 50%;
+        }
+
+        .mouth-smile {
+            width: 40px;
+            height: 25px;
+            border-bottom: 5px solid #fff;
+            border-radius: 0 0 18px 18px;
+        }
+
+        /* Sleep bubble */
+        .sleep-bubble {
+            position: absolute;
+            top: 60px;
+            right: 80px;
+            width: 40px;
+            height: 30px;
+            background: rgba(100, 150, 255, 0.3);
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Sleep Z symbol */
+        .sleep-z {
+            position: absolute;
+            top: 50px;
+            right: 60px;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: sleepZFloat 3s ease-in-out infinite;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        /* Control panel - manual testing */
+        .manual-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            width: 380px;
+        }
+
+        .control-btn {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 5px;
+            background: #e0e0e0;
+            color: #333;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: #d0d0d0;
+            transform: translateY(-1px);
+        }
+
+        .control-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        /* WebSocket status */
+        .websocket-status {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 9px;
+            text-align: center;
+        }
+
+        /* Loading screen */
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #333;
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Keyframes */
+        @keyframes ledPulse {
+            0%, 100% { opacity: 0.8; transform: translateY(-50%) scale(1); }
+            50% { opacity: 1; transform: translateY(-50%) scale(1.05); }
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+        }
+
+        @keyframes ambientGlow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes sparkleTwinkle {
+            0%, 100% { opacity: 0; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes sparkleFlicker {
+            0%, 100% { opacity: 0; }
+            25%, 75% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        @keyframes sleepZFloat {
+            0%, 100% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(-10px); opacity: 0.7; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes eyeGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+        }
+
+        @keyframes thinkGlow {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes listenGlow {
+            0%, 100% { border-color: #fff; }
+            50% { border-color: #e0e0ff; }
+        }
+
+        @keyframes listenSparkle {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        @keyframes mouthPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes mouthGentlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        @keyframes angleGlow {
+            0%, 100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+        }
+
+        @keyframes bubbleGlow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+
+        /* State-specific styles */
+        .state-excited .eye-ring {
+            border-width: 7px;
+            animation: eyeGlow 1.5s ease-in-out infinite;
+        }
+
+        .state-excited .eye-sparkle {
+            opacity: 1;
+            animation: sparkleTwinkle 1s ease-in-out infinite;
+        }
+
+        .state-excited .eye-secondary-sparkle {
+            opacity: 0.8;
+            animation: sparkleFlicker 0.8s ease-in-out infinite;
+        }
+
+        .state-excited .mouth-open {
+            display: flex;
+            animation: mouthPulse 0.8s ease-in-out infinite;
+        }
+
+        .state-excited .robot-container {
+            animation: breathe 2s ease-in-out infinite;
+        }
+
+        .state-sleeping .eye-ring,
+        .state-sleeping .eye-center {
+            display: none;
+        }
+
+        .state-sleeping .eye-closed {
+            display: block;
+            animation: breathe 5s ease-in-out infinite;
+        }
+
+        .state-sleeping .sleep-z,
+        .state-sleeping .sleep-bubble {
+            opacity: 1;
+        }
+
+        .state-sleeping .sleep-bubble {
+            animation: bubbleGlow 4s ease-in-out infinite;
+        }
+
+        .state-sleeping .mouth-w {
+            display: flex;
+            animation: mouthGentlePulse 3s ease-in-out infinite;
+        }
+
+        .state-sleeping .robot-container {
+            animation: breathe 6s ease-in-out infinite;
+        }
+
+        .state-winking .left-eye .eye-ring {
+            animation: winkBlink 3s ease-in-out infinite;
+        }
+
+        .state-winking .right-eye .eye-ring {
+            animation: none;
+        }
+
+        .state-winking .eye-ring {
+            border-color: #fff !important;
+            border-width: 8px !important;
+            background: transparent !important;
+        }
+
+        .state-winking .eye-center {
+            background: #000 !important;
+            width: 65px !important;
+            height: 65px !important;
+            border-radius: 50% !important;
+        }
+
+        .state-winking .mouth-w {
+            display: flex;
+        }
+
+        .state-joyful .eye-ring,
+        .state-joyful .eye-center {
+            display: none;
+        }
+
+        .state-joyful .eye-angle-left,
+        .state-joyful .eye-angle-right {
+            display: block;
+            animation: angleGlow 1.8s ease-in-out infinite;
+        }
+
+        .state-joyful .mouth-w {
+            display: flex;
+            animation: mouthPulse 1.2s ease-in-out infinite;
+        }
+
+        .state-joyful .robot-container {
+            animation: breathe 3s ease-in-out infinite;
+        }
+
+        .state-thinking .eye-ring {
+            border-color: #ccc;
+            border-width: 6px;
+            animation: thinkGlow 3s ease-in-out infinite;
+        }
+
+        .state-thinking .eye-center {
+            background: #ccc;
+            width: 50px;
+            height: 50px;
+        }
+
+        .state-thinking .mouth-neutral {
+            width: 35px;
+            height: 3px;
+            background: #ccc;
+        }
+
+        .state-thinking .robot-container {
+            animation: breathe 4.5s ease-in-out infinite;
+        }
+
+        .state-listening .eye-sparkle {
+            opacity: 0.9;
+            animation: listenSparkle 1s ease-in-out infinite;
+        }
+
+        .state-listening .eye-secondary-sparkle {
+            opacity: 0.7;
+            animation: listenSparkle 1.5s ease-in-out infinite;
+        }
+
+        .state-listening .eye-ring {
+            border-width: 9px;
+            animation: listenGlow 1.5s ease-in-out infinite;
+        }
+
+        .state-listening .robot-container {
+            animation: breathe 3.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="robot-container" id="robotContainer">
+        <!-- Ear hints -->
+        <div class="ear-hints">
+            <div class="ear-hint left"></div>
+            <div class="ear-hint right"></div>
+        </div>
+
+        <!-- LED Indicator -->
+        <div class="led-indicator"></div>
+
+        <div class="screen">
+            <!-- Loading screen -->
+            <div class="loading-screen" id="loadingScreen">
+                <div class="loading-text">Łączenie z Watus...</div>
+                <div class="loading-spinner"></div>
+            </div>
+
+            <!-- Status indicator -->
+            <div class="status-indicator" id="statusIndicator"></div>
+
+            <!-- Sleep elements -->
+            <div class="sleep-z" id="sleepZ">Z</div>
+            <div class="sleep-bubble" id="sleepBubble"></div>
+
+            <!-- Eyebrows -->
+            <div class="eyebrows">
+                <div class="eyebrow eyebrow-left"></div>
+                <div class="eyebrow eyebrow-right"></div>
+            </div>
+
+            <!-- Face container -->
+            <div class="face-container">
+                <!-- Eyes -->
+                <div class="eyes-container">
+                    <div class="eye left-eye">
+                        <div class="eye-ring">
+                            <div class="eye-center"></div>
+                        </div>
+                        <div class="eye-closed" style="display: none;"></div>
+                        <div class="eye-angle-left"></div>
+                        <div class="eye-sparkle"></div>
+                        <div class="eye-secondary-sparkle"></div>
+                        <div class="eye-pupil"></div>
+                    </div>
+                    <div class="eye right-eye">
+                        <div class="eye-ring">
+                            <div class="eye-center"></div>
+                        </div>
+                        <div class="eye-closed" style="display: none;"></div>
+                        <div class="eye-angle-right"></div>
+                        <div class="eye-sparkle"></div>
+                        <div class="eye-secondary-sparkle"></div>
+                        <div class="eye-pupil"></div>
+                    </div>
+                </div>
+
+                <!-- Mouth -->
+                <div class="mouth-area" id="mouthArea">
+                    <div class="mouth-neutral"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual controls for testing -->
+        <div class="manual-controls">
+            <button class="control-btn" onclick="setState('excited')">Excited</button>
+            <button class="control-btn" onclick="setState('sleeping')">Sleep</button>
+            <button class="control-btn" onclick="setState('winking')">Wink</button>
+            <button class="control-btn" onclick="setState('joyful')">Joy</button>
+            <button class="control-btn" onclick="setState('thinking')">Think</button>
+            <button class="control-btn" onclick="setState('listening')">Listen</button>
+            <button class="control-btn" onclick="setState('neutral')">Neutral</button>
+            <button class="control-btn" onclick="initWebSocket()">Reconnect</button>
+        </div>
+
+        <!-- WebSocket status -->
+        <div class="websocket-status" id="wsStatus">WebSocket: Rozłączony</div>
+    </div>
+
+    <script>
+        // State definitions
+        const states = {
+            excited: { name: 'Excited', color: '#FF9800' },
+            sleeping: { name: 'Sleeping', color: '#2196F3' },
+            winking: { name: 'Winking', color: '#9C27B0' },
+            joyful: { name: 'Joyful', color: '#E91E63' },
+            thinking: { name: 'Thinking', color: '#607D8B' },
+            listening: { name: 'Listening', color: '#9C27B0' },
+            neutral: { name: 'Neutral', color: '#4CAF50' }
+        };
+
+        let currentState = 'neutral';
+        let ws = null;
+        let isConnected = false;
+        let reconnectInterval = null;
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            const wsUrl = 'ws://localhost:8080';
+
+            try {
+                showLoading(true);
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function(event) {
+                    isConnected = true;
+                    updateConnectionStatus(true);
+                    showLoading(false);
+                    console.log('WebSocket połączony z Watus');
+                    clearInterval(reconnectInterval);
+                };
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+
+                ws.onclose = function(event) {
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                    console.log('WebSocket rozłączony');
+                    reconnectInterval = setTimeout(initWebSocket, 3000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                    showLoading(false);
+                };
+
+            } catch (error) {
+                console.error('Błąd podczas łączenia WebSocket:', error);
+                updateConnectionStatus(false);
+                showLoading(false);
+            }
+        }
+
+        // Handle WebSocket messages from bridge server
+        function handleWebSocketMessage(data) {
+            console.log('Otrzymano wiadomość WebSocket:', data);
+
+            switch(data.type) {
+                case 'state':
+                    const watusState = data.state;
+                    const source = data.source || 'unknown';
+
+                    console.log(`State change: ${watusState} (source: ${source})`);
+
+                    // Mapowanie stanów z bridge servera na nasze stany
+                    const stateMapping = {
+                        'listening': 'listening',
+                        'processing': 'thinking', 
+                        'speaking': 'excited',
+                        'idle': 'neutral',
+                        'excited': 'excited',
+                        'sleeping': 'sleeping',
+                        'winking': 'winking',
+                        'joyful': 'joyful',
+                        'thinking': 'thinking',
+                        'neutral': 'neutral'
+                    };
+
+                    const mappedState = stateMapping[watusState] || 'neutral';
+                    setState(mappedState);
+                    break;
+
+                case 'dialog':
+                    console.log('Dialog message:', data.message);
+                    break;
+
+                case 'pong':
+                    console.log('Pong received');
+                    break;
+
+                default:
+                    console.log('Nieznany typ wiadomości:', data.type);
+            }
+        }
+
+        // Set robot state
+        function setState(newState) {
+            if (!states[newState]) {
+                console.error('Nieznany stan:', newState);
+                return;
+            }
+
+            // Update button states
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = Array.from(document.querySelectorAll('.control-btn'))
+                .find(btn => btn.textContent.toLowerCase().includes(states[newState].name.toLowerCase().split(' ')[0]));
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            currentState = newState;
+
+            // Update status indicator color
+            const indicator = document.getElementById('statusIndicator');
+            indicator.style.backgroundColor = states[newState].color;
+            indicator.style.boxShadow = `0 0 10px ${states[newState].color}`;
+
+            // Update CSS class for state-specific styles
+            const container = document.getElementById('robotContainer');
+            container.className = container.className.replace(/state-\w+/g, '');
+            container.classList.add(`state-${newState}`);
+
+            // Update facial expression based on state
+            updateFacialExpression(newState);
+
+            console.log(`Stan zmieniony na: ${states[newState].name}`);
+
+            // Send state change via WebSocket
+            if (isConnected && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'state_change',
+                    state: newState,
+                    timestamp: Date.now(),
+                    source: 'bellabot_interface'
+                }));
+            }
+        }
+
+        // Update facial expression based on state
+        function updateFacialExpression(state) {
+            const mouthArea = document.getElementById('mouthArea');
+            const sleepZ = document.getElementById('sleepZ');
+            const sleepBubble = document.getElementById('sleepBubble');
+
+            // Reset all eye elements
+            document.querySelectorAll('.eye-ring, .eye-center').forEach(el => {
+                el.style.display = '';
+                el.style.borderColor = '#fff';
+                el.style.borderWidth = '8px';
+                el.style.background = '#000';
+                el.style.animation = '';
+            });
+            document.querySelectorAll('.eye-pupil').forEach(el => {
+                el.style.opacity = '0';
+                el.style.display = 'none';
+                el.classList.remove('happy', 'top-left');
+            });
+            document.querySelectorAll('.eye-closed, .eye-angle-left, .eye-angle-right').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            // Reset mouth
+            mouthArea.innerHTML = '<div class="mouth-neutral"></div>';
+
+            // Reset animations and classes
+            document.querySelectorAll('.eye').forEach(eye => {
+                eye.classList.remove('eye-blink');
+            });
+            document.querySelectorAll('.eye-pupil').forEach(p => {
+                p.classList.remove('top-left');
+            });
+
+            // Reset sleep elements
+            sleepZ.style.opacity = '0';
+            sleepBubble.style.opacity = '0';
+            sleepZ.style.display = 'none';
+            sleepBubble.style.display = 'none';
+
+            switch(state) {
+                case 'excited':
+                    document.querySelectorAll('.eye-sparkle').forEach(s => s.style.opacity = '1');
+                    document.querySelectorAll('.eye-secondary-sparkle').forEach(s => s.style.opacity = '0.8');
+                    document.querySelectorAll('.eye-ring').forEach(el => {
+                        el.style.borderWidth = '9px';
+                    });
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.6');
+                    mouthArea.innerHTML = '<div class="mouth-open" style="display: flex;"></div>';
+                    break;
+
+                case 'sleeping':
+                    document.querySelectorAll('.eye-ring, .eye-center').forEach(el => el.style.display = 'none');
+                    document.querySelectorAll('.eye-closed').forEach(el => el.style.display = 'block');
+                    sleepZ.style.opacity = '1';
+                    sleepZ.style.display = 'block';
+                    sleepBubble.style.opacity = '1';
+                    sleepBubble.style.display = 'block';
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0');
+                    mouthArea.innerHTML = '<div class="mouth-w"></div>';
+                    break;
+
+                case 'winking':
+                    document.querySelectorAll('.eye-ring, .eye-center').forEach(el => {
+                        el.style.display = 'block';
+                        el.style.borderColor = '#fff';
+                        el.style.borderWidth = '8px';
+                        el.style.background = 'transparent';
+                    });
+                    document.querySelectorAll('.eye-center').forEach(el => {
+                        el.style.width = '65px';
+                        el.style.height = '65px';
+                        el.style.borderRadius = '50%';
+                        el.style.background = '#000';
+                        el.style.border = 'none';
+                    });
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.8');
+                    mouthArea.innerHTML = '<div class="mouth-w"></div>';
+                    break;
+
+                case 'joyful':
+                    document.querySelectorAll('.eye-ring, .eye-center').forEach(el => el.style.display = 'none');
+                    document.querySelectorAll('.eye-angle-left').forEach(el => {
+                        el.style.display = 'block';
+                        el.innerHTML = '>';
+                        el.style.fontSize = '210px';
+                        el.style.color = '#fff';
+                        el.style.fontFamily = 'Arial, sans-serif';
+                        el.style.textAlign = 'center';
+                        el.style.lineHeight = '120px';
+                    });
+                    document.querySelectorAll('.eye-angle-right').forEach(el => {
+                        el.style.display = 'block';
+                        el.innerHTML = '<';
+                        el.style.fontSize = '210px';
+                        el.style.color = '#fff';
+                        el.style.fontFamily = 'Arial, sans-serif';
+                        el.style.textAlign = 'center';
+                        el.style.lineHeight = '120px';
+                    });
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.9');
+                    mouthArea.innerHTML = '<div class="mouth-open" style="display: flex;"></div>';
+                    break;
+
+                case 'thinking':
+                    document.querySelectorAll('.eye-ring').forEach(el => {
+                        el.style.display = 'block';
+                        el.style.borderColor = '#ddd';
+                        el.style.borderWidth = '5px';
+                        el.style.background = 'transparent';
+                    });
+                    document.querySelectorAll('.eye-center').forEach(el => {
+                        el.style.display = 'block';
+                        el.style.width = '45px';
+                        el.style.height = '45px';
+                        el.style.borderRadius = '50%';
+                        el.style.background = '#ccc';
+                        el.style.border = 'none';
+                    });
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.4');
+                    mouthArea.innerHTML = '<div class="mouth-neutral" style="width: 35px; height: 3px; background: #ccc;"></div>';
+                    break;
+
+                case 'listening':
+                    document.querySelectorAll('.eye-sparkle').forEach(s => s.style.opacity = '0.9');
+                    document.querySelectorAll('.eye-secondary-sparkle').forEach(s => s.style.opacity = '0.7');
+                    document.querySelectorAll('.eye-ring').forEach(el => {
+                        el.style.borderWidth = '9px';
+                        el.style.animation = 'listenGlow 1.5s ease-in-out infinite';
+                    });
+                    document.querySelectorAll('.eye-pupil').forEach(p => {
+                        p.style.display = 'block';
+                        p.style.opacity = '1';
+                        p.classList.add('top-left');
+                    });
+                    document.querySelectorAll('.eye').forEach(eye => {
+                        eye.classList.add('eye-blink');
+                    });
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.7');
+                    mouthArea.innerHTML = '<div class="mouth-neutral" style="width: 45px; height: 5px;"></div>';
+                    break;
+
+                case 'neutral':
+                default:
+                    document.querySelectorAll('.eye-ring').forEach(el => {
+                        el.style.borderColor = '#fff';
+                        el.style.borderWidth = '8px';
+                    });
+                    document.querySelectorAll('.eye-center').forEach(el => {
+                        el.style.background = '#000';
+                        el.style.width = '60px';
+                        el.style.height = '60px';
+                    });
+                    document.querySelectorAll('.eye-sparkle').forEach(s => s.style.opacity = '0');
+                    document.querySelectorAll('.eye-secondary-sparkle').forEach(s => s.style.opacity = '0');
+                    document.querySelectorAll('.eyebrow').forEach(b => b.style.opacity = '0.5');
+                    mouthArea.innerHTML = '<div class="mouth-neutral" style="width: 50px; height: 6px;"></div>';
+                    break;
+            }
+        }
+
+        // Update connection status display
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('wsStatus');
+            if (connected) {
+                statusElement.textContent = 'WebSocket: Połączony';
+                statusElement.style.color = '#4CAF50';
+            } else {
+                statusElement.textContent = 'WebSocket: Rozłączony';
+                statusElement.style.color = '#f44336';
+            }
+        }
+
+        // Show/hide loading indicator
+        function showLoading(show) {
+            const loading = document.getElementById('loadingScreen');
+            if (show) {
+                loading.classList.remove('hidden');
+            } else {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Watus BellaBot Interface v1.0');
+            setState('neutral');
+            initWebSocket();
+        });
+
+        // Keyboard shortcuts for testing
+        document.addEventListener('keydown', function(e) {
+            const keyMap = {
+                '1': 'excited', '2': 'sleeping', '3': 'winking', '4': 'joyful',
+                '5': 'thinking', '6': 'listening', '7': 'neutral'
+            };
+
+            if (keyMap[e.key]) {
+                setState(keyMap[e.key]);
+            }
+        });
+    </script>
+</body>
+</html>
