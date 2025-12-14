@@ -7,24 +7,34 @@ WebSocket Bridge dla BellaBot Interface
 import asyncio
 import json
 import time
+import sys
+import platform
+from pathlib import Path
+
+# Fix dla Windows - musi być PRZED importem zmq.asyncio
+if platform.system() == "Windows":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# Dodaj ścieżkę do modułów watus_audio
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import zmq
 import zmq.asyncio
 from websockets.server import serve
 from websockets.exceptions import ConnectionClosed
 from typing import Set, Dict, Any
 
+# Import konfiguracji z watus_audio
+from watus_audio import config
+
 class BellabotWebSocketBridge:
-    def __init__(self, 
-                 zmq_pub_addr: str = "tcp://127.0.0.1:7780",
-                 zmq_sub_addr: str = "tcp://127.0.0.1:7781",
-                 ws_port: int = 8080):
-        self.zmq_pub_addr = zmq_pub_addr
-        self.zmq_sub_addr = zmq_sub_addr
+    def __init__(self, ws_port: int = 8080):
+        # Użyj portów z konfiguracji Watus
+        self.zmq_watus_pub_addr = config.PUB_ADDR  # Port na którym Watus publikuje
         self.ws_port = ws_port
 
         # ZMQ Context
         self.zmq_context = zmq.asyncio.Context()
-        self.publisher_socket = None
         self.subscriber_socket = None
 
         # WebSocket connections
@@ -37,28 +47,28 @@ class BellabotWebSocketBridge:
     async def setup_zmq(self):
         """Inicjalizuje gniazda ZMQ"""
         try:
-            # Publisher socket - for sending commands to Watus
-            self.publisher_socket = self.zmq_context.socket(zmq.PUB)
-            self.publisher_socket.setsockopt(zmq.SNDHWM, 100)
-            self.publisher_socket.bind(self.zmq_pub_addr)
-            print(f"[Bridge] ZMQ PUB: {self.zmq_pub_addr}")
-
             # Subscriber socket - for receiving states from Watus
             self.subscriber_socket = self.zmq_context.socket(zmq.SUB)
             self.subscriber_socket.setsockopt_string(zmq.SUBSCRIBE, "watus.state")
             self.subscriber_socket.setsockopt_string(zmq.SUBSCRIBE, "dialog.leader")
-            self.subscriber_socket.connect(self.zmq_sub_addr)
-            print(f"[Bridge] ZMQ SUB: {self.zmq_sub_addr}")
+            self.subscriber_socket.connect(self.zmq_watus_pub_addr)
+            print(f"[Bridge] ZMQ SUB connected to: {self.zmq_watus_pub_addr}")
+            print(f"[Bridge] Subscribed topics: watus.state, dialog.leader")
 
         except Exception as e:
             print(f"[Bridge] ZMQ setup error: {e}")
+            raise
 
     async def zmq_subscriber_loop(self):
         """Pętla nasłuchująca ZMQ i publikująca do WebSocket"""
+        print("[Bridge] ZMQ subscriber loop started, waiting for messages...")
         while True:
             try:
                 topic, message_payload = await self.subscriber_socket.recv_multipart()
                 decoded_message = json.loads(message_payload.decode("utf-8"))
+                
+                topic_str = topic.decode("utf-8")
+                print(f"[Bridge] Received ZMQ: {topic_str} -> {decoded_message.get('state', '')}")
 
                 if topic == b"watus.state":
                     await self.handle_watus_state(decoded_message)
@@ -67,14 +77,12 @@ class BellabotWebSocketBridge:
 
             except Exception as e:
                 print(f"[Bridge] ZMQ subscriber error: {e}")
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.5)
 
     async def handle_watus_state(self, message: Dict[str, Any]):
         """Obsługuje zmiany stanu Watus i przekazuje do BellaBot"""
         state_name = message.get("state", "")
         timestamp = message.get("timestamp", time.time())
-
-        print(f"[Bridge] Watus state: {state_name}")
 
         # Mapowanie stanów Watus na stany BellaBot
         bellabot_state_mapping = {
@@ -85,25 +93,22 @@ class BellabotWebSocketBridge:
         }
 
         bellabot_state = bellabot_state_mapping.get(state_name, "neutral")
+        print(f"[Bridge] State: {state_name} -> {bellabot_state} (clients: {len(self.connected_clients)})")
 
         # Aktualizuj lokalny stan
-        if bellabot_state != self.current_state:
-            self.current_state = bellabot_state
-            self.last_state_change = timestamp
+        self.current_state = bellabot_state
+        self.last_state_change = timestamp
 
-            # Publikuj do wszystkich podłączonych klientów WebSocket
-            await self.broadcast_to_clients({
-                "type": "state",
-                "state": bellabot_state,
-                "timestamp": timestamp,
-                "source": "watus"
-            })
+        # Publikuj do wszystkich podłączonych klientów WebSocket
+        await self.broadcast_to_clients({
+            "type": "state",
+            "state": bellabot_state,
+            "timestamp": timestamp,
+            "source": "watus"
+        })
 
     async def handle_dialog_leader(self, message: Dict[str, Any]):
         """Obsługuje komunikaty lidera dialogu"""
-        print(f"[Bridge] Dialog leader message received")
-
-        # Przekaż informacje o dialogu do interfejsu
         await self.broadcast_to_clients({
             "type": "dialog",
             "message": message,
@@ -127,12 +132,11 @@ class BellabotWebSocketBridge:
                 print(f"[Bridge] WebSocket send error: {e}")
                 disconnected_clients.add(client)
 
-        # Usuń rozłączonych klientów
         self.connected_clients -= disconnected_clients
 
     async def handle_client(self, websocket):
         """Obsługuje nowe połączenie WebSocket"""
-        print(f"[Bridge] New client connected: {websocket.remote_address}")
+        print(f"[Bridge] Client connected: {websocket.remote_address}")
         self.connected_clients.add(websocket)
 
         try:
@@ -148,45 +152,17 @@ class BellabotWebSocketBridge:
             async for message in websocket:
                 try:
                     data = json.loads(message)
-                    await self.handle_client_message(websocket, data)
-                except json.JSONDecodeError:
-                    print(f"[Bridge] Invalid JSON from client: {message}")
-                except Exception as e:
-                    print(f"[Bridge] Client message error: {e}")
+                    if data.get("type") == "ping":
+                        await websocket.send(json.dumps({
+                            "type": "pong",
+                            "timestamp": time.time()
+                        }, ensure_ascii=False))
+                except:
+                    pass
         except ConnectionClosed:
             pass
-        except Exception as e:
-            print(f"[Bridge] Client handler error: {e}")
         finally:
-            print(f"[Bridge] Client disconnected: {websocket.remote_address}")
             self.connected_clients.discard(websocket)
-
-    async def handle_client_message(self, websocket, data: Dict[str, Any]):
-        """Obsługuje wiadomości od klientów WebSocket"""
-        message_type = data.get("type")
-
-        if message_type == "state_change":
-            # Klient chce zmienić stan BellaBot
-            new_state = data.get("state")
-            if new_state and self.publisher_socket:
-                # Publikuj przez ZMQ dla innych systemów
-                state_message = {
-                    "state": new_state,
-                    "timestamp": time.time(),
-                    "source": "bellabot_interface"
-                }
-                await self.publisher_socket.send_multipart([
-                    b"bellabot.state",
-                    json.dumps(state_message, ensure_ascii=False).encode("utf-8")
-                ])
-                print(f"[Bridge] Published bellabot state: {new_state}")
-
-        elif message_type == "ping":
-            # Odpowiedz na ping
-            await websocket.send(json.dumps({
-                "type": "pong",
-                "timestamp": time.time()
-            }, ensure_ascii=False))
 
     async def start_server(self):
         """Uruchamia WebSocket server"""
@@ -196,33 +172,26 @@ class BellabotWebSocketBridge:
         asyncio.create_task(self.zmq_subscriber_loop())
 
         # Uruchom WebSocket server
-        print(f"[Bridge] Starting WebSocket server on port {self.ws_port}")
+        print(f"[Bridge] WebSocket: ws://127.0.0.1:{self.ws_port}")
+        print(f"[Bridge] Listening for Watus on: {self.zmq_watus_pub_addr}")
+        print("[Bridge] Ready!")
+        print()
+        
         async with serve(self.handle_client, "127.0.0.1", self.ws_port):
-            print(f"[Bridge] Bellabot WebSocket Bridge ready!")
-            print(f"[Bridge] WebSocket: ws://127.0.0.1:{self.ws_port}")
-            print(f"[Bridge] ZMQ: {self.zmq_pub_addr} <-> {self.zmq_sub_addr}")
-
-            await asyncio.Future()  # Uruchom forever
+            await asyncio.Future()
 
     def cleanup(self):
         """Sprzątanie zasobów"""
         try:
-            if self.publisher_socket:
-                self.publisher_socket.close()
             if self.subscriber_socket:
                 self.subscriber_socket.close()
             self.zmq_context.term()
-        except Exception as e:
-            print(f"[Bridge] Cleanup error: {e}")
+        except:
+            pass
 
 async def main():
     """Główna funkcja"""
-    bridge = BellabotWebSocketBridge(
-        zmq_pub_addr="tcp://127.0.0.1:7782",  # Bridge publishes on different port
-        zmq_sub_addr="tcp://127.0.0.1:7780",  # Subscribe to Watus PUB port
-        ws_port=8080
-    )
-
+    bridge = BellabotWebSocketBridge(ws_port=8080)
     try:
         await bridge.start_server()
     except KeyboardInterrupt:
@@ -232,6 +201,4 @@ async def main():
 
 if __name__ == "__main__":
     print("=== Bellabot WebSocket Bridge ===")
-    print("Connecting ZMQ (watus_project_2) to WebSocket (BellaBot Interface)")
-    print()
     asyncio.run(main())

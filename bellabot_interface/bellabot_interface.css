@@ -1,0 +1,541 @@
+/* =====================================================
+   WATUS BELLABOT INTERFACE - STYLES
+   ===================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg-color: #0a0a14;
+    --robot-bg: #000;
+    --face-color: #fff;
+    --state-neutral: #6b7280;
+    --state-listening: #a855f7;
+    --state-thinking: #f59e0b;
+    --state-excited: #22c55e;
+    --state-sleeping: #3b82f6;
+    --state-joyful: #ec4899;
+    --state-reconnect: #ef4444;
+}
+
+body {
+    background: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+/* =====================================================
+   ROBOT CONTAINER
+   ===================================================== */
+
+.robot-container {
+    position: relative;
+    width: 640px;
+    height: 450px;
+    background: var(--robot-bg);
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+}
+
+.screen {
+    width: 600px;
+    height: 340px;
+    background: var(--robot-bg);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+/* LED Indicator */
+.led {
+    position: absolute;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    transition: all 0.4s ease;
+}
+
+/* =====================================================
+   FACE STRUCTURE  
+   ===================================================== */
+
+.face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 35px;
+    transition: transform 0.3s ease;
+}
+
+.eyes {
+    display: flex;
+    gap: 100px;
+    height: 120px;
+    align-items: center;
+}
+
+.eye {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.mouth {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =====================================================
+   EYE SHAPES
+   ===================================================== */
+
+/* Neutral Eye - Full Circle */
+.eye-circle {
+    width: 80px;
+    height: 90px;
+    border: 10px solid var(--face-color);
+    border-radius: 50%;
+    background: transparent;
+}
+
+/* Closed Eye - Horizontal Arc (Sleep) */
+.eye-closed-arc {
+    width: 70px;
+    height: 0;
+    border-bottom: 10px solid var(--face-color);
+    border-radius: 0 0 50px 50px;
+    transform: translateY(15px);
+}
+
+/* Happy/Joy Eye - Upward Arc (^ shape) */
+.eye-happy-arc {
+    width: 70px;
+    height: 35px;
+    border: 10px solid var(--face-color);
+    border-bottom: none;
+    border-radius: 70px 70px 0 0;
+}
+
+/* Excited Eye - Inverted U (Rainbow) */
+.eye-excited {
+    width: 80px;
+    height: 45px;
+    border: 12px solid var(--face-color);
+    border-bottom: none;
+    border-radius: 80px 80px 0 0;
+}
+
+/* Wink Eye - Single Arc */
+.eye-wink {
+    width: 60px;
+    height: 0;
+    border-top: 10px solid var(--face-color);
+    border-radius: 50px 50px 0 0;
+    transform: rotate(-10deg);
+}
+
+/* Listen Eye - Enlarged Circle */
+.eye-listen {
+    width: 95px;
+    height: 105px;
+    border: 10px solid var(--face-color);
+    border-radius: 50%;
+    animation: listenPulse 1.5s ease-in-out infinite;
+}
+
+/* Think Eye - Circle with Pupil */
+.eye-think {
+    width: 80px;
+    height: 80px;
+    border: 8px solid var(--face-color);
+    border-radius: 50%;
+    position: relative;
+}
+
+.eye-think::after {
+    content: '';
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    background: var(--face-color);
+    border-radius: 50%;
+    top: 8px;
+    right: 8px;
+    animation: thinkScan 3s ease-in-out infinite;
+}
+
+/* Reconnect Eye - X shape */
+.eye-x {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.eye-x::before,
+.eye-x::after {
+    content: '';
+    position: absolute;
+    width: 70px;
+    height: 10px;
+    background: var(--face-color);
+    top: 50%;
+    left: 50%;
+    border-radius: 5px;
+}
+
+.eye-x::before { transform: translate(-50%, -50%) rotate(45deg); }
+.eye-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+/* Droopy Eye - Sad slant */
+.eye-droopy-left {
+    width: 60px;
+    height: 0;
+    border-bottom: 10px solid var(--face-color);
+    transform: rotate(-25deg);
+}
+
+.eye-droopy-right {
+    width: 60px;
+    height: 0;
+    border-bottom: 10px solid var(--face-color);
+    transform: rotate(25deg);
+}
+
+/* =====================================================
+   MOUTH SHAPES
+   ===================================================== */
+
+/* Neutral Mouth - Straight Line */
+.mouth-line {
+    width: 60px;
+    height: 8px;
+    background: var(--face-color);
+    border-radius: 4px;
+}
+
+/* Sleep Mouth - Small Circle */
+.mouth-o {
+    width: 25px;
+    height: 30px;
+    border: 8px solid var(--face-color);
+    border-radius: 50%;
+    animation: breathe 3s ease-in-out infinite;
+}
+
+/* Joy Mouth - Wide U Smile */
+.mouth-joy {
+    width: 100px;
+    height: 50px;
+    border: 10px solid var(--face-color);
+    border-top: none;
+    border-radius: 0 0 100px 100px;
+    animation: giggle 0.3s ease-in-out infinite;
+}
+
+/* Excited Mouth - Huge Smile */
+.mouth-excited {
+    width: 120px;
+    height: 55px;
+    background: var(--face-color);
+    border-radius: 0 0 120px 120px;
+    position: relative;
+}
+
+.mouth-excited::after {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 20px;
+    background: #ff6b9d;
+    border-radius: 50%;
+}
+
+/* Wink Mouth - Asymmetric Smile */
+.mouth-wink {
+    width: 60px;
+    height: 25px;
+    border: 6px solid var(--face-color);
+    border-top: none;
+    border-radius: 0 0 40px 60px;
+    transform: rotate(-5deg);
+}
+
+/* Listen Mouth - Tiny Dot */
+.mouth-dot {
+    width: 12px;
+    height: 12px;
+    background: var(--face-color);
+    border-radius: 50%;
+}
+
+/* Think Mouth - Wavy/Offset Line */
+.mouth-think {
+    width: 45px;
+    height: 6px;
+    background: var(--face-color);
+    border-radius: 3px;
+    transform: translateX(15px);
+    animation: thinkMouth 2s ease-in-out infinite;
+}
+
+/* Sad Mouth - Frown */
+.mouth-sad {
+    width: 50px;
+    height: 20px;
+    border: 8px solid var(--face-color);
+    border-bottom: none;
+    border-radius: 50px 50px 0 0;
+}
+
+/* =====================================================
+   ANIMATIONS
+   ===================================================== */
+
+/* Neutral Blink */
+@keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.05); }
+}
+
+/* Listen Pulse */
+@keyframes listenPulse {
+    0%, 100% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+    }
+    50% { 
+        transform: scale(1.05); 
+        box-shadow: 0 0 30px 10px rgba(168, 85, 247, 0.3);
+    }
+}
+
+/* Think Scan - Pupil Movement */
+@keyframes thinkScan {
+    0%, 100% { top: 8px; right: 8px; }
+    25% { top: 8px; right: 35px; }
+    50% { top: 35px; right: 35px; }
+    75% { top: 35px; right: 8px; }
+}
+
+/* Think Mouth Wave */
+@keyframes thinkMouth {
+    0%, 100% { transform: translateX(15px) rotate(0deg); }
+    50% { transform: translateX(-15px) rotate(3deg); }
+}
+
+/* Sleep Breathing */
+@keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* Joy Giggle */
+@keyframes giggle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+/* Excited Bounce */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-8px); }
+    50% { transform: translateY(0); }
+    75% { transform: translateY(-4px); }
+}
+
+/* Reconnect Blink */
+@keyframes reconnectBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* LED Glow */
+@keyframes ledGlow {
+    0%, 100% { box-shadow: 0 0 20px currentColor; }
+    50% { box-shadow: 0 0 40px currentColor, 0 0 60px currentColor; }
+}
+
+/* =====================================================
+   STATE-SPECIFIC STYLES
+   ===================================================== */
+
+/* NEUTRAL */
+.state-neutral .led {
+    background: var(--state-neutral);
+    box-shadow: 0 0 20px var(--state-neutral);
+}
+.state-neutral .eye-circle {
+    animation: blink 5s ease-in-out infinite;
+}
+
+/* LISTENING */
+.state-listening .led {
+    background: var(--state-listening);
+    box-shadow: 0 0 30px var(--state-listening);
+    animation: ledGlow 1.5s ease-in-out infinite;
+}
+
+/* THINKING */
+.state-thinking .led {
+    background: var(--state-thinking);
+    box-shadow: 0 0 25px var(--state-thinking);
+    animation: ledGlow 2.5s ease-in-out infinite;
+}
+
+/* EXCITED */
+.state-excited .led {
+    background: var(--state-excited);
+    box-shadow: 0 0 35px var(--state-excited);
+}
+.state-excited .face {
+    animation: bounce 0.5s ease-in-out infinite;
+}
+
+/* SLEEPING */
+.state-sleeping .led {
+    background: var(--state-sleeping);
+    box-shadow: 0 0 15px var(--state-sleeping);
+}
+.state-sleeping .screen {
+    opacity: 0.6;
+}
+.state-sleeping .face {
+    animation: breathe 4s ease-in-out infinite;
+}
+
+/* JOYFUL */
+.state-joyful .led {
+    background: var(--state-joyful);
+    box-shadow: 0 0 30px var(--state-joyful);
+}
+
+/* WINKING */
+.state-winking .led {
+    background: var(--state-joyful);
+    box-shadow: 0 0 25px var(--state-joyful);
+}
+
+/* RECONNECT */
+.state-reconnect .led {
+    background: var(--state-reconnect);
+    box-shadow: 0 0 25px var(--state-reconnect);
+    animation: reconnectBlink 1s ease-in-out infinite;
+}
+.state-reconnect .eye {
+    animation: reconnectBlink 0.8s ease-in-out infinite alternate;
+}
+
+/* =====================================================
+   STATUS BAR & CONTROLS
+   ===================================================== */
+
+.status-bar {
+    position: absolute;
+    bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.status-text {
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 500;
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 450px;
+}
+
+.btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid #333;
+}
+
+.btn:hover {
+    background: #252540;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.btn.active {
+    background: var(--state-color);
+    color: #fff;
+    border-color: transparent;
+}
+
+/* Sleep Z Animation */
+.sleep-z {
+    position: absolute;
+    top: 50px;
+    right: 120px;
+    color: var(--face-color);
+    font-size: 36px;
+    font-weight: bold;
+    opacity: 0.8;
+}
+
+.sleep-z span {
+    display: inline-block;
+    animation: floatZ 2s ease-in-out infinite;
+}
+
+.sleep-z span:nth-child(2) {
+    font-size: 28px;
+    animation-delay: 0.3s;
+    margin-left: 5px;
+}
+
+.sleep-z span:nth-child(3) {
+    font-size: 22px;
+    animation-delay: 0.6s;
+    margin-left: 5px;
+}
+
+@keyframes floatZ {
+    0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.8; }
+    50% { transform: translateY(-20px) rotate(10deg); opacity: 0.4; }
+}

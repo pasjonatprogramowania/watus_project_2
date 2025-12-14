@@ -62,12 +62,8 @@ async def main():
     print(f"[Browser] Opening: {interface_url}")
     webbrowser.open(interface_url)
     
-    # Uruchom WebSocket Bridge
-    bridge = BellabotWebSocketBridge(
-        zmq_pub_addr="tcp://127.0.0.1:7782",  # Bridge publishes on different port
-        zmq_sub_addr="tcp://127.0.0.1:7780",  # Subscribe to Watus PUB port
-        ws_port=ws_port
-    )
+    # Uruchom WebSocket Bridge (używa config.PUB_ADDR automatycznie)
+    bridge = BellabotWebSocketBridge(ws_port=ws_port)
     
     try:
         await bridge.start_server()
